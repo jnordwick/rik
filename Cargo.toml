@@ -1,0 +1,8 @@
+[package]
+name = "rik"
+version = "0.1.0"
+authors = ["Jason Nordwick <jnordwick@gmail.com>"]
+
+[dependencies]
+log = "0.3"
+

@@ -1,12 +1,4 @@
-#![allow(deprecated)]
-#![feature(buf_stream)]
-
-mod kobjects;
-mod konnection;
-
-use kobjects::KObject;
-use kobjects::KObject::*;
-use konnection::*;
+extern crate rik;
 
 // TODO: endian issues
 //         byteorder (0.3.11)
@@ -17,7 +9,7 @@ use konnection::*;
 
 fn main() {
 
-    let mut kk = Konnection::konnect("localhost:5001", "abc", "").unwrap();
+    let mut kk = rik::Konnection::konnect("localhost:5001", "abc", "").unwrap();
     println!("kk = {:?}", kk);
 
     let qq = kk.query("syms[1]");

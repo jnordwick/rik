@@ -44,46 +44,19 @@ pub enum KObject {
     SecondVector    (Vec<i32>       ),
     TimeVector      (Vec<i32>       ),
 
+    // Composites
+    // TODO: Strucutre into subtyps so I can say (Vector, Vector)
+    Dict              ((KObject, KObject)),
+    SortedDict        ((Kobject, KObject)),
+    Table             ((KObject, KObject)),
+
+    // TODO: These are really (Table, Table)
+    KeyedTable        ((KObject, KObject)),
+    SortedeKeyedTable ((KObject, KObject)),
+
     // Other
-    UnknownObj ( Vec<u8> ),
+    // TODO: maybe parse functions propertly?
+    Function   (Vec<u8>),
+    UnknownObj (Vec<u8>),
 }
 
-
-// enum KDict {
-//     Dict       ( KVector, KVector ),
-//     SortedDict ( KVector, KVector ),
-//     Table      ( KVector, KVector ),
-// }
-
-// enum KKEyed {
-//     KeyedTable       ( KDict, KDict ),
-//     SortedKeyedTable ( KDict, KDict ),
-// }
-
-// struct DictRepr<K,V> {
-//     keys: Vec<K>,
-//     vals: Vec<V>,
-
-// }
-// enum KVerbPhrase {
-//     KVerb,
-//     KAdverb,
-// }
-
-// enum KVerb {
-//     Lambda              ( String ),
-//     UnaryPrimitive      ( u8     ),
-//     BinaryPrimitive     ( u8     ),
-//     TernaryPrimiive     ( u8     ),
-//     FunctionProjection  ( Vec<KVerbPhrase> ),
-//     FunctionComposition ( Vec<KVerbPhrase> ),
-// }
-
-// enum KAdverb {
-//     EachAdverb      ( KVerbPhrase ),
-//     OverAdverb      ( KVerbPhrase ),
-//     ScanAdverb      ( KVerbPhrase ),
-//     EachPairAdverb  ( KVerbPhrase ),
-//     RightEachAdverb ( KVerbPhrase ),
-//     LeftEachAdverb  ( KVerbPhrase ),
-// }

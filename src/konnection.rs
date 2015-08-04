@@ -7,8 +7,8 @@ use std::result::Result;
 use std::slice;
 use std::mem;
 
-use kobjects::KObject;
-use kobjects::KObject::*;
+use kobjects::{KObject,KVector,KAtom};
+
 
 #[derive(Debug)]
 pub struct Konnection {
@@ -106,15 +106,15 @@ impl Konnection {
         println!("mhdr = {:?}", mhdr);
         self.read_kobj(&mhdr)
     }
-    
+
     fn read_kobj(&mut self, mhdr: &KMessageHeader) -> KObject {
         let val_type = self.stream.fill_buf().unwrap()[0] as i8;
         let payload = mhdr.size - mem::size_of::<KMessageHeader>() as i32;
         println!("payload_size = {} val_type = {:?}", payload, val_type);
         match val_type {
             0 => self.read_klist(payload),
-            1...19 => self.read_kvector(payload),
-            -19...-1 => self.read_katom(payload),
+            1...19 => KObject::Vector(self.read_kvector(payload)),
+            -19...-1 => KObject::Atom(self.read_katom(payload)),
             _ => self.read_kunknown(payload),
         }
     }
@@ -147,17 +147,17 @@ impl Konnection {
         unimplemented!()
     }
 
-    fn read_symatom(&mut self, size: usize) -> KObject {
+    fn read_symatom(&mut self, size: usize) -> KAtom {
         let mut v = Vec::<u8>::with_capacity(size);
         let ptr = v.as_mut_ptr() as *mut u8;
         let slc = unsafe { slice::from_raw_parts_mut(ptr, size) };
         read_all(&mut self.stream, slc);
         unsafe { v.set_len(size - 1); }
         print!("sym = {:?}", v);
-        SymbolAtom(String::from_utf8(v).unwrap())
+        KAtom::Symbol(String::from_utf8(v).unwrap())
     }
 
-    fn read_symvec(&mut self, size: usize) -> KObject {
+    fn read_symvec(&mut self, size: usize) -> KVector {
         let mut v = Vec::<String>::new();
         {
             let stream = Read::take(&mut self.stream, size as u64 - 1u64);
@@ -170,70 +170,70 @@ impl Konnection {
         self.stream.consume(1);  // and the -1 seem to be a bug/poor interaction
                                  // between bufread, take, and split. Change Vec::split
                                  // https://github.com/rust-lang/rust/issues/27463
-        SymbolVector(v)
+        KVector::Symbol(v)
     }
 
-    fn read_kvector(&mut self, size: i32) -> KObject {
+    fn read_kvector(&mut self, size: i32) -> KVector {
         let mut vhdr: KVectorHeader = unsafe { mem::uninitialized() };
         read_all(&mut self.stream, struct_to_bytes_mut(&mut vhdr));
 
         println!("vhdr = {:?}", vhdr);
         match vhdr.val_type {
-            1 => BooleanVector(self.read_vec::<u8>(vhdr.len as usize)),
-            2 => GuidVector(self.read_vec::<(u64, u64)>(vhdr.len as usize)),
+            1 => KVector::Boolean(self.read_vec::<u8>(vhdr.len as usize)),
+            2 => KVector::Guid(self.read_vec::<(u64, u64)>(vhdr.len as usize)),
             3 => unimplemented!(),
-            4 => ByteVector(self.read_vec::<i8>(vhdr.len as usize)),
-            5 => ShortVector(self.read_vec::<i16>(vhdr.len as usize)),
-            6 => IntVector(self.read_vec::<i32>(vhdr.len as usize)),
-            7 => LongVector(self.read_vec::<i64>(vhdr.len as usize)),
-            8 => RealVector(self.read_vec::<f32>(vhdr.len as usize)),
-            9 => FloatVector(self.read_vec::<f64>(vhdr.len as usize)),
-            10 => CharVector(self.read_vec::<u8>(vhdr.len as usize)),
+            4 => KVector::Byte(self.read_vec::<i8>(vhdr.len as usize)),
+            5 => KVector::Short(self.read_vec::<i16>(vhdr.len as usize)),
+            6 => KVector::Int(self.read_vec::<i32>(vhdr.len as usize)),
+            7 => KVector::Long(self.read_vec::<i64>(vhdr.len as usize)),
+            8 => KVector::Real(self.read_vec::<f32>(vhdr.len as usize)),
+            9 => KVector::Float(self.read_vec::<f64>(vhdr.len as usize)),
+            10 => KVector::Char(self.read_vec::<u8>(vhdr.len as usize)),
             11 => self.read_symvec(size as usize - mem::size_of::<KVectorHeader>()),
-            12 => TimestampVector(self.read_vec::<i64>(vhdr.len as usize)),
-            13 => MonthVector(self.read_vec::<i32>(vhdr.len as usize)),
-            14 => DateVector(self.read_vec::<i32>(vhdr.len as usize)),
-            15 => DateTimeVector(self.read_vec::<f64>(vhdr.len as usize)),
-            16 => TimespanVector(self.read_vec::<i64>(vhdr.len as usize)),
-            17 => MinuteVector(self.read_vec::<i32>(vhdr.len as usize)),
-            18 => SecondVector(self.read_vec::<i32>(vhdr.len as usize)),
-            19 => TimeVector(self.read_vec::<i32>(vhdr.len as usize)),
+            12 => KVector::Timestamp(self.read_vec::<i64>(vhdr.len as usize)),
+            13 => KVector::Month(self.read_vec::<i32>(vhdr.len as usize)),
+            14 => KVector::Date(self.read_vec::<i32>(vhdr.len as usize)),
+            15 => KVector::DateTime(self.read_vec::<f64>(vhdr.len as usize)),
+            16 => KVector::Timespan(self.read_vec::<i64>(vhdr.len as usize)),
+            17 => KVector::Minute(self.read_vec::<i32>(vhdr.len as usize)),
+            18 => KVector::Second(self.read_vec::<i32>(vhdr.len as usize)),
+            19 => KVector::Time(self.read_vec::<i32>(vhdr.len as usize)),
             _ => unreachable!(),
         }
     }
 
-    fn read_katom(&mut self, size: i32) -> KObject {
+    fn read_katom(&mut self, size: i32) -> KAtom {
         let mut buf = [0u8];
         read_all(&mut self.stream, buf.as_mut());
 
         let val_type = buf[0] as i8;
         println!("atom val_type = {}", val_type);
         match -val_type {
-            1 => BooleanAtom(self.read_atom::<u8>()),
-            2 => GuidAtom(self.read_atom::<(u64, u64)>()),
+            1 => KAtom::Boolean(self.read_atom::<u8>()),
+            2 => KAtom::Guid(self.read_atom::<(u64, u64)>()),
             3 => unimplemented!(),
-            4 => ByteAtom(self.read_atom::<i8>()),
-            5 => ShortAtom(self.read_atom::<i16>()),
-            6 => IntAtom(self.read_atom::<i32>()),
-            7 => LongAtom(self.read_atom::<i64>()),
-            8 => RealAtom(self.read_atom::<f32>()),
-            9 => FloatAtom(self.read_atom::<f64>()),
-            10 => CharAtom(self.read_atom::<u8>()),
+            4 => KAtom::Byte(self.read_atom::<i8>()),
+            5 => KAtom::Short(self.read_atom::<i16>()),
+            6 => KAtom::Int(self.read_atom::<i32>()),
+            7 => KAtom::Long(self.read_atom::<i64>()),
+            8 => KAtom::Real(self.read_atom::<f32>()),
+            9 => KAtom::Float(self.read_atom::<f64>()),
+            10 => KAtom::Char(self.read_atom::<u8>()),
             11 => self.read_symatom(size as usize - 1usize),
-            12 => TimestampAtom(self.read_atom::<i64>()),
-            13 => MonthAtom(self.read_atom::<i32>()),
-            14 => DateAtom(self.read_atom::<i32>()),
-            15 => DateTimeAtom(self.read_atom::<f64>()),
-            16 => TimespanAtom(self.read_atom::<i64>()),
-            17 => MinuteAtom(self.read_atom::<i32>()),
-            18 => SecondAtom(self.read_atom::<i32>()),
-            19 => TimeAtom(self.read_atom::<i32>()),
+            12 => KAtom::Timestamp(self.read_atom::<i64>()),
+            13 => KAtom::Month(self.read_atom::<i32>()),
+            14 => KAtom::Date(self.read_atom::<i32>()),
+            15 => KAtom::DateTime(self.read_atom::<f64>()),
+            16 => KAtom::Timespan(self.read_atom::<i64>()),
+            17 => KAtom::Minute(self.read_atom::<i32>()),
+            18 => KAtom::Second(self.read_atom::<i32>()),
+            19 => KAtom::Time(self.read_atom::<i32>()),
             _ => unreachable!(),
         }
     }
 
     fn read_kunknown(&mut self, size: i32) -> KObject {
-        UnknownObj(self.read_vec::<u8>(size as usize))
+        KObject::UnknownObj(self.read_vec::<u8>(size as usize))
     }
 }
 

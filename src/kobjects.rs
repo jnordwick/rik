@@ -2,57 +2,64 @@
 // as it gets extracted from the protocol code
 
 #[derive(Debug)]
+pub enum KVector {
+    Boolean   (Vec<u8>        ),
+    Guid      (Vec<(u64, u64)>),
+    Byte      (Vec<i8>        ),
+    Short     (Vec<i16>       ),
+    Int       (Vec<i32>       ),
+    Long      (Vec<i64>       ),
+    Real      (Vec<f32>       ),
+    Float     (Vec<f64>       ),
+    Char      (Vec<u8>        ),
+    Symbol    (Vec<String>    ),
+    Timestamp (Vec<i64>       ),
+    Month     (Vec<i32>       ),
+    Date      (Vec<i32>       ),
+    DateTime  (Vec<f64>       ),
+    Timespan  (Vec<i64>       ),
+    Minute    (Vec<i32>       ),
+    Second    (Vec<i32>       ),
+    Time      (Vec<i32>       ),
+}
+
+#[derive(Debug)]
+pub enum KAtom {
+    Boolean   (u8        ),
+    Guid      ((u64, u64)),
+    Byte      (i8        ),
+    Short     (i16       ),
+    Int       (i32       ),
+    Long      (i64       ),
+    Real      (f32       ),
+    Float     (f64       ),
+    Char      (u8        ),
+    Symbol    (String    ),
+    Timestamp (i64       ),
+    Month     (i32       ),
+    Date      (i32       ),
+    DateTime  (f64       ),
+    Timespan  (i64       ),
+    Minute    (i32       ),
+    Second    (i32       ),
+    Time      (i32       ),
+}
+
+#[derive(Debug)]
 pub enum KObject {
     // Atoms
-    BooleanAtom   (u8        ),
-    GuidAtom      ((u64, u64)),
-    ByteAtom      (i8        ),
-    ShortAtom     (i16       ),
-    IntAtom       (i32       ),
-    LongAtom      (i64       ),
-    RealAtom      (f32       ),
-    FloatAtom     (f64       ),
-    CharAtom      (u8        ),
-    SymbolAtom    (String    ),
-    TimestampAtom (i64       ),
-    MonthAtom     (i32       ),
-    DateAtom      (i32       ),
-    DateTimeAtom  (f64       ),
-    TimespanAtom  (i64       ),
-    MinuteAtom    (i32       ),
-    SecondAtom    (i32       ),
-    TimeAtom      (i32       ),
-
-    // Vectors
-    GeneralList     (Vec<KObject>   ),
-    BooleanVector   (Vec<u8>        ),
-    GuidVector      (Vec<(u64, u64)>),
-    ByteVector      (Vec<i8>        ),
-    ShortVector     (Vec<i16>       ),
-    IntVector       (Vec<i32>       ),
-    LongVector      (Vec<i64>       ),
-    RealVector      (Vec<f32>       ),
-    FloatVector     (Vec<f64>       ),
-    CharVector      (Vec<u8>        ),
-    SymbolVector    (Vec<String>    ),
-    TimestampVector (Vec<i64>       ),
-    MonthVector     (Vec<i32>       ),
-    DateVector      (Vec<i32>       ),
-    DateTimeVector  (Vec<f64>       ),
-    TimespanVector  (Vec<i64>       ),
-    MinuteVector    (Vec<i32>       ),
-    SecondVector    (Vec<i32>       ),
-    TimeVector      (Vec<i32>       ),
+    GeneralList (Vec<KObject>),
+    Atom        (KAtom       ),
+    Vector      (KVector     ),
 
     // Composites
-    // TODO: Strucutre into subtyps so I can say (Vector, Vector)
-    Dict              ((KObject, KObject)),
-    SortedDict        ((Kobject, KObject)),
-    Table             ((KObject, KObject)),
+    // Dict              ((KObject, KObject)),
+    // SortedDict        ((KObject, KObject)),
+    // Table             ((KObject, KObject)),
 
-    // TODO: These are really (Table, Table)
-    KeyedTable        ((KObject, KObject)),
-    SortedeKeyedTable ((KObject, KObject)),
+    // // TODO: These are really (Table, Table)
+    // KeyedTable        ((KObject, KObject)),
+    // SortedeKeyedTable ((KObject, KObject)),
 
     // Other
     // TODO: maybe parse functions propertly?

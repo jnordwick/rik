@@ -1,11 +1,22 @@
 // For now just the KObject enum. will including parsing code
 // as it gets extracted from the protocol code
 
-// TODO: this needs to be reworked somehow. Enums are not the way
-// to model this. Maybe use structs and phantom types to ensure
-// type checking
+// TODO: Still not sure of the type mapping
 
 use std::ptr::copy_nonoverlapping;
+
+#[derive(Debug)]
+pub enum KObject {
+    Atom        (KAtom),
+    Vector      (KVector),
+
+    Dictionary  (KDictionary),
+    Table       (KTable),
+    KeyedTable  (KKeyedTable),
+
+    Function   (Vec<u8>),
+    UnknownObj (Vec<u8>),
+}
 
 #[derive(Debug)]
 pub enum KAtom {
@@ -53,84 +64,72 @@ pub enum KVector {
     Time      (Vec<KTime>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KBoolean(pub u8);
 
-#[derive(Debug)]
-pub struct KGuid(pub u64, pub u64);
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct KGuid(pub [u64;16]);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KByte(pub i8);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KShort(pub i16);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KInt(pub i32);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KLong(pub i64);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KReal(pub f32);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KFloat(pub f64);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KChar(pub u8);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KSymbol(pub String);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KTimestamp(pub i64);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KMonth(pub i32);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KDate(pub i32);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KDateTime(pub f64);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KTimespan(pub i64);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KMinute(pub i32);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KSecond(pub i32);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KTime(pub i32);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KList(pub Vec<KObject>);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KDictionary(pub KVector, pub KVector);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KTable(pub KVector, pub KList);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KKeyedTable(pub KTable, pub KTable);
 
-#[derive(Debug)]
-pub enum KObject {
-    Atom        (KAtom       ),
-    Vector      (KVector     ),
-
-    Dictionary  (KDictionary),
-    Table       (KTable),
-    KeyedTable  (KKeyedTable),
-
-    Function   (Vec<u8>),
-    UnknownObj (Vec<u8>),
-}
 
 unsafe fn make_vec<T>(data: *const T, len: usize) -> Vec<T> {
     let mut v = Vec::<T>::with_capacity(len);

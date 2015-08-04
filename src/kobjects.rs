@@ -1,69 +1,141 @@
 // For now just the KObject enum. will including parsing code
 // as it gets extracted from the protocol code
 
-#[derive(Debug)]
-pub enum KVector {
-    Boolean   (Vec<u8>        ),
-    Guid      (Vec<(u64, u64)>),
-    Byte      (Vec<i8>        ),
-    Short     (Vec<i16>       ),
-    Int       (Vec<i32>       ),
-    Long      (Vec<i64>       ),
-    Real      (Vec<f32>       ),
-    Float     (Vec<f64>       ),
-    Char      (Vec<u8>        ),
-    Symbol    (Vec<String>    ),
-    Timestamp (Vec<i64>       ),
-    Month     (Vec<i32>       ),
-    Date      (Vec<i32>       ),
-    DateTime  (Vec<f64>       ),
-    Timespan  (Vec<i64>       ),
-    Minute    (Vec<i32>       ),
-    Second    (Vec<i32>       ),
-    Time      (Vec<i32>       ),
-}
+// TODO: this needs to be reworked somehow. Enums are not the way
+// to model this. Maybe use structs and phantom types to ensure
+// type checking
+
+use std::ptr::copy_nonoverlapping;
 
 #[derive(Debug)]
 pub enum KAtom {
-    Boolean   (u8        ),
-    Guid      ((u64, u64)),
-    Byte      (i8        ),
-    Short     (i16       ),
-    Int       (i32       ),
-    Long      (i64       ),
-    Real      (f32       ),
-    Float     (f64       ),
-    Char      (u8        ),
-    Symbol    (String    ),
-    Timestamp (i64       ),
-    Month     (i32       ),
-    Date      (i32       ),
-    DateTime  (f64       ),
-    Timespan  (i64       ),
-    Minute    (i32       ),
-    Second    (i32       ),
-    Time      (i32       ),
+    Boolean   (KBoolean),
+    Guid      (KGuid),
+    Byte      (KByte),
+    Short     (KShort),
+    Int       (KInt),
+    Long      (KLong),
+    Real      (KReal),
+    Float     (KFloat),
+    Char      (KChar),
+    Symbol    (KSymbol),
+    Timestamp (KTimestamp),
+    Month     (KMonth),
+    Date      (KDate),
+    DateTime  (KDateTime),
+    Timespan  (KTimespan),
+    Minute    (KMinute),
+    Second    (KSecond),
+    Time      (KTime),
 }
 
 #[derive(Debug)]
+pub enum KVector {
+    GeneralList(KList),
+
+    Boolean   (Vec<KBoolean>),
+    Guid      (Vec<KGuid>),
+    Byte      (Vec<KByte>),
+    Short     (Vec<KShort>),
+    Int       (Vec<KInt>),
+    Long      (Vec<KLong>),
+    Real      (Vec<KReal>),
+    Float     (Vec<KFloat>),
+    Char      (Vec<KChar>),
+    Symbol    (Vec<KSymbol>),
+    Timestamp (Vec<KTimestamp>),
+    Month     (Vec<KMonth>),
+    Date      (Vec<KDate>),
+    DateTime  (Vec<KDateTime>),
+    Timespan  (Vec<KTimespan>),
+    Minute    (Vec<KMinute>),
+    Second    (Vec<KSecond>),
+    Time      (Vec<KTime>),
+}
+
+#[derive(Debug)]
+pub struct KBoolean(pub u8);
+
+#[derive(Debug)]
+pub struct KGuid(pub u64, pub u64);
+
+#[derive(Debug)]
+pub struct KByte(pub i8);
+
+#[derive(Debug)]
+pub struct KShort(pub i16);
+
+#[derive(Debug)]
+pub struct KInt(pub i32);
+
+#[derive(Debug)]
+pub struct KLong(pub i64);
+
+#[derive(Debug)]
+pub struct KReal(pub f32);
+
+#[derive(Debug)]
+pub struct KFloat(pub f64);
+
+#[derive(Debug)]
+pub struct KChar(pub u8);
+
+#[derive(Debug)]
+pub struct KSymbol(pub String);
+
+#[derive(Debug)]
+pub struct KTimestamp(pub i64);
+
+#[derive(Debug)]
+pub struct KMonth(pub i32);
+
+#[derive(Debug)]
+pub struct KDate(pub i32);
+
+#[derive(Debug)]
+pub struct KDateTime(pub f64);
+
+#[derive(Debug)]
+pub struct KTimespan(pub i64);
+
+#[derive(Debug)]
+pub struct KMinute(pub i32);
+
+#[derive(Debug)]
+pub struct KSecond(pub i32);
+
+#[derive(Debug)]
+pub struct KTime(pub i32);
+
+#[derive(Debug)]
+pub struct KList(pub Vec<KObject>);
+
+#[derive(Debug)]
+pub struct KDictionary(pub KVector, pub KVector);
+
+#[derive(Debug)]
+pub struct KTable(pub KVector, pub KList);
+
+#[derive(Debug)]
+pub struct KKeyedTable(pub KTable, pub KTable);
+
+#[derive(Debug)]
 pub enum KObject {
-    // Atoms
-    GeneralList (Vec<KObject>),
     Atom        (KAtom       ),
     Vector      (KVector     ),
 
-    // Composites
-    // Dict              ((KObject, KObject)),
-    // SortedDict        ((KObject, KObject)),
-    // Table             ((KObject, KObject)),
+    Dictionary  (KDictionary),
+    Table       (KTable),
+    KeyedTable  (KKeyedTable),
 
-    // // TODO: These are really (Table, Table)
-    // KeyedTable        ((KObject, KObject)),
-    // SortedeKeyedTable ((KObject, KObject)),
-
-    // Other
-    // TODO: maybe parse functions propertly?
     Function   (Vec<u8>),
     UnknownObj (Vec<u8>),
+}
+
+unsafe fn make_vec<T>(data: *const T, len: usize) -> Vec<T> {
+    let mut v = Vec::<T>::with_capacity(len);
+    copy_nonoverlapping(data, v.as_mut_ptr(), len);
+    v.set_len(len);
+    v
 }
 

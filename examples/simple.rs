@@ -15,7 +15,8 @@ fn main() {
     let qq = kk.query("syms[1]");
     println!("qq = {:?}", qq);
 
-    let rr = kk.response();
+    kk.read_message();
+    let rr = rik::KObject::parse(&kk.buf);
     println!("rr = {:?}", rr);
 
     println!("done");

@@ -5,9 +5,6 @@ use std::io::prelude::*;
 use std::mem;
 use std::net::*;
 use std::result::Result;
-use std::slice;
-
-use kobjects::*;
 
 
 #[derive(Debug)]

@@ -1,3 +1,5 @@
+#![feature(convert)]
+
 extern crate rik;
 
 // TODO: endian issues
@@ -12,12 +14,12 @@ fn main() {
     let mut kk = rik::Konnection::konnect("localhost:5001", "abc", "").unwrap();
     println!("kk = {:?}", kk);
 
-    let qq = kk.query("syms[1]");
+    let qq = kk.query("randoms");
     println!("qq = {:?}", qq);
 
     kk.read_message();
-    let rr = rik::KObject::parse(&kk.buf);
-    println!("rr = {:?}", rr);
+    let (rr, ss) = rik::KObject::parse(kk.buf.as_slice());
+    println!("ss={:?} rr = {:?}", rr, ss);
 
     println!("done");
 }

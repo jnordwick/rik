@@ -1,7 +1,10 @@
-// For now just the KObject enum. will including parsing code
-// as it gets extracted from the protocol code
 
-// TODO: Still not sure of the type mapping
+// TODO: tables, dicts
+// TODO: remove header structs?
+// TODO: maps to standard rust collections
+// TODO: serialize to kdb
+// TODO: functions
+// TODO: collapse all atom/vector out, use guards on type codes instead?
 
 use std::mem::size_of;
 use std::ptr::{read, copy_nonoverlapping};
@@ -66,62 +69,51 @@ pub enum KVector {
     Time      (Vec<KTime>),
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KBoolean(pub u8);
+impl KVector {
+    fn len(&self) -> usize {
+        match *self {
+            KVector::List(ref v) => v.len(),
+            KVector::Boolean(ref v) => v.len(),
+            KVector::Guid(ref v) => v.len(),
+            KVector::Byte(ref v) => v.len(),
+            KVector::Short(ref v) => v.len(),
+            KVector::Int(ref v) => v.len(),
+            KVector::Long(ref v) => v.len(),
+            KVector::Real(ref v) => v.len(),
+            KVector::Float(ref v) => v.len(),
+            KVector::Char(ref v) => v.len(),
+            KVector::Symbol(ref v) => v.len(),
+            KVector::Timestamp(ref v) => v.len(),
+            KVector::Month(ref v) => v.len(),
+            KVector::Date(ref v) => v.len(),
+            KVector::DateTime(ref v) => v.len(),
+            KVector::Timespan(ref v) => v.len(),
+            KVector::Minute(ref v) => v.len(),
+            KVector::Second(ref v) => v.len(),
+            KVector::Time(ref v) => v.len(),
+        }
+    }
+}
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KGuid(pub [u64;16]);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KByte(pub i8);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KShort(pub i16);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KInt(pub i32);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KLong(pub i64);
-
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
-pub struct KReal(pub f32);
-
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
-pub struct KFloat(pub f64);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KChar(pub u8);
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KSymbol(pub String);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KTimestamp(pub i64);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KMonth(pub i32);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KDate(pub i32);
-
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
-pub struct KDateTime(pub f64);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KTimespan(pub i64);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KMinute(pub i32);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KSecond(pub i32);
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct KTime(pub i32);
-
-#[derive(Debug)]
-pub struct KList(pub Vec<KObject>);
+pub type KBoolean = u8;
+pub type KGuid = [u64;16];
+pub type KByte = i8;
+pub type KShort = i16;
+pub type KInt = i32;
+pub type KLong = i64;
+pub type KReal = f32;
+pub type KFloat = f64;
+pub type KChar = u8;
+pub type KSymbol = String;
+pub type KTimestamp = i64;
+pub type KMonth = i32;
+pub type KDate = i32;
+pub type KDateTime = f64;
+pub type KTimespan = i64;
+pub type KMinute = i32;
+pub type KSecond = i32;
+pub type KTime = i32;
+pub type KList = Vec<KObject>;
 
 #[derive(Debug)]
 pub struct KDictionary(pub KVector, pub KVector);
@@ -147,6 +139,13 @@ struct KVectorHeader {
     len: i32,
 }
 
+// #[derive(Debug)]
+// #[repr(packed)]
+// struct KTableHeader {
+//     val_type: i8, // = 98
+//     attrib: i8,
+// }
+
 macro_rules! cast_add {
     ($c:expr, $p:expr, $i:expr) => ({
         let (val, len) = $p;
@@ -162,7 +161,38 @@ impl KObject {
         match val_type {
             -19...-1 => cast_add!(KObject::Atom, Self::parse_atom(msg), 0),
             0...19 => cast_add!(KObject::Vector, Self::parse_vector(msg), 0),
+            98 => cast_add!(KObject::Table, Self::parse_table(msg), 0),
+            99 | 127 => Self::parse_dict(msg),
             _ => unimplemented!(),
+        }
+    }
+
+    pub fn parse_dict(msg: &[u8]) -> (KObject, usize) {
+        println!("enter parse_dict");
+        let (keys, klen) = Self::parse(&msg[1..]);
+        println!("keys parse_dict {:?}", keys);
+        let (vals, vlen) = Self::parse(&msg[1+klen..]);
+        println!("values parse_dict {:?}", vals);
+        let kobj = match (keys, vals) {
+            (KObject::Vector(kv), KObject::Vector(vv)) => {
+                KObject::Dictionary(KDictionary(kv, vv))
+            }
+            (KObject::Table(kt), KObject::Table(vt)) => {
+                KObject::KeyedTable(KKeyedTable(kt, vt))
+            }
+            _ => {
+                unimplemented!();
+            }
+        };
+        println!("returning parse_dict");
+        (kobj, 1+klen+vlen)
+    }
+
+    pub fn parse_table(msg: &[u8]) -> (KTable, usize) {
+        let (dict, len) = Self::parse_dict(&msg[2..]);
+        match dict {
+            KObject::Dictionary(KDictionary(v, KVector::List(w))) => (KTable(v, w), 2+len),
+            _ => unreachable!()
         }
     }
 
@@ -228,17 +258,19 @@ impl KObject {
             v.push(obj);
             s += len;
         }
-        (KList(v), s)
+        (v, s)
     }
 
     fn read_atom<T>(data: &[u8]) -> (T, usize) {
         unsafe { (read(data.as_ptr() as *const T), size_of::<T>()) }
     }
 
+    // FIXME: hacky. If not 0-terminated, gives back from  length (one too long),
+    //  but still works bc the ony caller doesn't add term byte either!
     fn read_sym_atom(data: &[u8]) -> (KSymbol, usize) {
         let p = data.iter().position(|x| *x == 0u8).unwrap();
         let s = String::from_utf8(data[..p].to_vec()).unwrap();
-        (KSymbol(s), p + 1)
+        (s, p + 1)
     }
 
     fn read_vector<T>(len: i32, data: &[u8]) -> (Vec<T>, usize) {
@@ -254,10 +286,10 @@ impl KObject {
     fn read_sym_vector(len: i32, data: &[u8]) -> (Vec<KSymbol>, usize) {
         let mut v = Vec::<KSymbol>::with_capacity(len as usize);
         let mut s = 0usize;
-        for sub in data.splitn(len as usize, |e| *e == 0) {
-            let (sym, len) = Self::read_sym_atom(sub);
-            v.push(sym);
-            s += len;
+        while v.len() < len as usize {
+            let e = data[s..].iter().position(|x| *x == 0u8).unwrap();
+            v.push(String::from_utf8(data[s..s+e].to_vec()).unwrap());
+            s += e + 1;
         }
         (v, s)
     }

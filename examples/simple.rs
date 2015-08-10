@@ -14,7 +14,7 @@ fn main() {
     let mut kk = rik::Konnection::konnect("localhost:5001", "abc", "").unwrap();
     println!("kk = {:?}", kk);
 
-    let qq = kk.query("randoms");
+    let qq = kk.query("kt");
     println!("qq = {:?}", qq);
 
     kk.read_message();

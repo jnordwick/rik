@@ -12,7 +12,7 @@ fn main() {
     let mut kk = rik::Konnection::konnect("localhost:5001", "abc", "").unwrap();
     println!("kk = {:?}", kk);
 
-    let qq = kk.query("kt");
+    let qq = kk.query("ll");
     println!("qq = {:?}", qq);
 
     let buf = kk.read_message();

@@ -18,8 +18,8 @@ pub enum KObject {
     Table       (KTable),
     KeyedTable  (KKeyedTable),
 
-    Function   (Vec<u8>),
-    Unknown    (Vec<u8>),
+    Lambda   (KLambda),
+    Unknown  (Vec<u8>),
 }
 
 #[derive(Debug)]
@@ -113,6 +113,7 @@ pub type KMinute = i32;
 pub type KSecond = i32;
 pub type KTime = i32;
 pub type KList = Vec<KObject>;
+pub type KLambda = (KSymbol, String);
 
 #[derive(Debug)]
 pub struct KDictionary(pub KVector, pub KVector);
@@ -161,11 +162,12 @@ impl KObject {
             0...19 => cast_add!(KObject::Vector, Self::parse_vector(msg), 0),
             98 => cast_add!(KObject::Table, Self::parse_table(msg), 0),
             99 | 127 => Self::parse_dict(msg),
+            100 => cast_add!(KObject::Lambda, Self::parse_lambda(msg), 0),
             _ => unimplemented!(),
         }
     }
 
-    pub fn parse_dict(msg: &[u8]) -> (KObject, usize) {
+    fn parse_dict(msg: &[u8]) -> (KObject, usize) {
         let (keys, klen) = Self::parse(&msg[1..]);
         let (vals, vlen) = Self::parse(&msg[1+klen..]);
         let kobj = match (keys, vals) {
@@ -182,11 +184,20 @@ impl KObject {
         (kobj, 1+klen+vlen)
     }
 
-    pub fn parse_table(msg: &[u8]) -> (KTable, usize) {
+    fn parse_table(msg: &[u8]) -> (KTable, usize) {
         let (dict, len) = Self::parse_dict(&msg[2..]);
         match dict {
             KObject::Dictionary(KDictionary(v, KVector::List(w))) => (KTable(v, w), 2+len),
             _ => unreachable!()
+        }
+    }
+
+    fn parse_lambda(msg: &[u8]) -> (KLambda, usize) {
+        let (sym, slen) = Self::read_sym_atom(&msg[1..]);
+        let (text, tlen) = Self::parse_vector(&msg[1+slen..]);
+        match text {
+            KVector::Char(v) => ((sym, String::from_utf8(v).unwrap()), 1+slen+tlen),
+            _ => unimplemented!(),
         }
     }
 

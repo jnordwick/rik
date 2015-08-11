@@ -70,7 +70,7 @@ pub enum KVector {
 }
 
 impl KVector {
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         match *self {
             KVector::List(ref v) => v.len(),
             KVector::Boolean(ref v) => v.len(),

@@ -1,5 +1,3 @@
-#![feature(convert)]
-
 extern crate rik;
 
 // TODO: endian issues
@@ -17,8 +15,8 @@ fn main() {
     let qq = kk.query("kt");
     println!("qq = {:?}", qq);
 
-    kk.read_message();
-    let (rr, ss) = rik::KObject::parse(kk.buf.as_slice());
+    let buf = kk.read_message();
+    let (rr, ss) = rik::KObject::parse(buf);
     println!("ss={:?} rr = {:?}", rr, ss);
 
     println!("done");

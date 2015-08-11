@@ -1,4 +1,3 @@
-
 // TODO: tables, dicts
 // TODO: remove header structs?
 // TODO: maps to standard rust collections
@@ -157,7 +156,6 @@ impl KObject {
 
     pub fn parse(msg: &[u8]) -> (KObject, usize) {
         let val_type = msg[0] as i8;
-        println!("parse msg size = {} val type = {}", msg.len(), val_type);
         match val_type {
             -19...-1 => cast_add!(KObject::Atom, Self::parse_atom(msg), 0),
             0...19 => cast_add!(KObject::Vector, Self::parse_vector(msg), 0),
@@ -168,11 +166,8 @@ impl KObject {
     }
 
     pub fn parse_dict(msg: &[u8]) -> (KObject, usize) {
-        println!("enter parse_dict");
         let (keys, klen) = Self::parse(&msg[1..]);
-        println!("keys parse_dict {:?}", keys);
         let (vals, vlen) = Self::parse(&msg[1+klen..]);
-        println!("values parse_dict {:?}", vals);
         let kobj = match (keys, vals) {
             (KObject::Vector(kv), KObject::Vector(vv)) => {
                 KObject::Dictionary(KDictionary(kv, vv))
@@ -184,7 +179,6 @@ impl KObject {
                 unimplemented!();
             }
         };
-        println!("returning parse_dict");
         (kobj, 1+klen+vlen)
     }
 

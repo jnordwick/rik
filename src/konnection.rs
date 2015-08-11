@@ -1,5 +1,3 @@
-#[allow(deprecated)]
-
 use std::io::{self, BufStream};
 use std::io::prelude::*;
 use std::mem;
@@ -47,12 +45,10 @@ fn struct_to_bytes_mut<T>(s: &mut T) -> &mut [u8] {
 }
 
 fn read_all(r: &mut BufStream<TcpStream>, buf: &mut [u8]) {
-    println!("read_all for {}", buf.len());
     let len = buf.len();
     let mut n = 0;
     while n < len {
         n += r.read(&mut buf[n..]).unwrap();
-        println!("read total {}", n);
     }
 }
 
@@ -101,16 +97,16 @@ impl Konnection {
         size
     }
 
-    pub fn read_message(&mut self) {
+    pub fn read_message(&mut self) -> &[u8] {
         let mut mhdr: KMessageHeader = unsafe { mem::uninitialized() };
         read_all(&mut self.stream, struct_to_bytes_mut(&mut mhdr));
-        println!("read_message mhdr = {:?}", mhdr);
         let payload_size = mhdr.size as usize - mem::size_of::<KMessageHeader>();
         unsafe {
             self.buf.reserve(payload_size);
             self.buf.set_len(payload_size);
             read_all(&mut self.stream, self.buf.as_mut_slice());
         }
+        self.buf.as_slice()
     }
 }
 

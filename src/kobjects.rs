@@ -18,7 +18,7 @@ pub enum KObject {
     Table       (KTable),
     KeyedTable  (KKeyedTable),
 
-    Lambda   (KLambda),
+    Function (KFunction),
     Unknown  (Vec<u8>),
 }
 
@@ -68,6 +68,15 @@ pub enum KVector {
     Time      (Vec<KTime>),
 }
 
+#[derive(Debug)]
+pub enum KFunction {
+    Lambda(KLambda),
+    PrimVerb(KPrimVerb),
+    Adverb(KAdverb),
+    Projection(KProjection),
+    Composition(KComposition),
+}
+
 impl KVector {
     pub fn len(&self) -> usize {
         match *self {
@@ -114,6 +123,10 @@ pub type KSecond = i32;
 pub type KTime = i32;
 pub type KList = Vec<KObject>;
 pub type KLambda = (KSymbol, String);
+pub type KPrimVerb = (i8, i8);
+pub type KAdverb = (i8, Box<KFunction>);
+pub type KProjection = Vec<KObject>;
+pub type KComposition = Vec<KObject>; // All Functions, could be tighened up a little
 
 #[derive(Debug)]
 pub struct KDictionary(pub KVector, pub KVector);
@@ -162,7 +175,34 @@ impl KObject {
             0...19 => cast_add!(KObject::Vector, Self::parse_vector(msg), 0),
             98 => cast_add!(KObject::Table, Self::parse_table(msg), 0),
             99 | 127 => Self::parse_dict(msg),
-            100 => cast_add!(KObject::Lambda, Self::parse_lambda(msg), 0),
+            100...111 => cast_add!(KObject::Function, Self::parse_function(msg), 0),
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn parse_function(msg: &[u8]) -> (KFunction, usize) {
+        let val_type = msg[0] as i8;
+        match val_type {
+            100 => cast_add!(KFunction::Lambda, Self::parse_lambda(&msg[1..]), 1),
+            101...103 => (KFunction::PrimVerb((val_type, msg[1] as i8)), 2),
+            104 => cast_add!(KFunction::Projection, Self::parse_proj(&msg[1..]), 1),
+            105 => cast_add!(KFunction::Composition, Self::parse_proj(&msg[1..]), 1),
+            106...111 =>  cast_add!(KFunction::Adverb, Self::parse_adverb(&msg), 0),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn parse_proj(msg: &[u8]) -> (KProjection, usize) {
+        let len = Self::read_atom::<i32>(&msg).0;
+        let (kobj, klen) = Self::read_list(len, &msg[4..]);
+        (kobj, len as usize + klen)
+    }
+
+    fn parse_adverb(msg: &[u8]) -> (KAdverb, usize) {
+        let adverb = msg[0] as i8;
+        let (func, len) = Self::parse(&msg[1..]);
+        match func {
+            KObject::Function(f) => ((adverb, Box::new(f)), 1+len),
             _ => unimplemented!(),
         }
     }
@@ -193,10 +233,10 @@ impl KObject {
     }
 
     fn parse_lambda(msg: &[u8]) -> (KLambda, usize) {
-        let (sym, slen) = Self::read_sym_atom(&msg[1..]);
-        let (text, tlen) = Self::parse_vector(&msg[1+slen..]);
+        let (sym, slen) = Self::read_sym_atom(&msg);
+        let (text, tlen) = Self::parse_vector(&msg[slen..]);
         match text {
-            KVector::Char(v) => ((sym, String::from_utf8(v).unwrap()), 1+slen+tlen),
+            KVector::Char(v) => ((sym, String::from_utf8(v).unwrap()), slen+tlen),
             _ => unimplemented!(),
         }
     }

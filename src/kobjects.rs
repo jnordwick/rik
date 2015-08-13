@@ -171,12 +171,12 @@ impl KObject {
     pub fn parse(msg: &[u8]) -> (KObject, usize) {
         let val_type = msg[0] as i8;
         match val_type {
-            -19...-1 => cast_add!(KObject::Atom, Self::parse_atom(msg), 0),
-            0...19 => cast_add!(KObject::Vector, Self::parse_vector(msg), 0),
+            -19...-4 | -2...-1 => cast_add!(KObject::Atom, Self::parse_atom(msg), 0),
+            0...2 | 4...19 => cast_add!(KObject::Vector, Self::parse_vector(msg), 0),
             98 => cast_add!(KObject::Table, Self::parse_table(msg), 0),
             99 | 127 => Self::parse_dict(msg),
             100...111 => cast_add!(KObject::Function, Self::parse_function(msg), 0),
-            _ => unimplemented!(),
+            _ => panic!("Unknown type code: {}", val_type),
         }
     }
 
@@ -188,7 +188,7 @@ impl KObject {
             104 => cast_add!(KFunction::Projection, Self::parse_proj(&msg[1..]), 1),
             105 => cast_add!(KFunction::Composition, Self::parse_proj(&msg[1..]), 1),
             106...111 =>  cast_add!(KFunction::Adverb, Self::parse_adverb(&msg), 0),
-            _ => unimplemented!(),
+            _ => unreachable!(),
         }
     }
 
@@ -203,7 +203,7 @@ impl KObject {
         let (func, len) = Self::parse(&msg[1..]);
         match func {
             KObject::Function(f) => ((adverb, Box::new(f)), 1+len),
-            _ => unimplemented!(),
+            _ => panic!("parsing adverb expected function, found: {:?}", func),
         }
     }
 
@@ -217,8 +217,8 @@ impl KObject {
             (KObject::Table(kt), KObject::Table(vt)) => {
                 KObject::KeyedTable(KKeyedTable(kt, vt))
             }
-            _ => {
-                unimplemented!();
+            (ref k, ref v)  => {
+                panic!("parsing dict, not correct form:\n\t{:?}\n\t{:?}", k, v);
             }
         };
         (kobj, 1+klen+vlen)
@@ -228,7 +228,7 @@ impl KObject {
         let (dict, len) = Self::parse_dict(&msg[2..]);
         match dict {
             KObject::Dictionary(KDictionary(v, KVector::List(w))) => (KTable(v, w), 2+len),
-            _ => unreachable!()
+            ref d => panic!("parsing table, not correct form: {:?}", d),
         }
     }
 
@@ -237,7 +237,7 @@ impl KObject {
         let (text, tlen) = Self::parse_vector(&msg[slen..]);
         match text {
             KVector::Char(v) => ((sym, String::from_utf8(v).unwrap()), slen+tlen),
-            _ => unimplemented!(),
+            ref t => panic!("parsing lambda, not correct form: {:?}", t),
         }
     }
 
@@ -311,7 +311,7 @@ impl KObject {
     }
 
     // FIXME: hacky. If not 0-terminated, gives back from  length (one too long),
-    //  but still works bc the ony caller doesn't add term byte either!
+    //  but still works bc the only caller doesn't add term byte either!
     fn read_sym_atom(data: &[u8]) -> (KSymbol, usize) {
         let p = data.iter().position(|x| *x == 0u8).unwrap();
         let s = String::from_utf8(data[..p].to_vec()).unwrap();

@@ -14,7 +14,7 @@ fn main() {
         // Most K structures are returned as either the underlying,
         // a Vec<T>, or a struct of the appropriate Vecs.
 
-        let qq = kk.query("`a`b`c!1 2 3");
+        kk.query("`a`b`c!1 2 3");
         let buf = kk.read_message();
         let (rr, ss) = rik::KObject::parse(buf);
         println!("size={:?} read={:?}", ss, rr);
@@ -41,6 +41,14 @@ fn main() {
         let (rr, _) = rik::KObject::parse(kk.read_message());
         if let rik::KObject::Vector(rik::KVector::Float(f)) = rr {
             println!("float = {:?}", f);
+        }
+    }
+
+    { // And an error
+        kk.query("!10");
+        let (rr, _) = rik::KObject::parse(kk.read_message());
+        if let rik::KObject::Error(s) = rr {
+            println!("Error = {}", s);
         }
     }
 

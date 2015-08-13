@@ -1,10 +1,3 @@
-// TODO: tables, dicts
-// TODO: remove header structs?
-// TODO: maps to standard rust collections
-// TODO: serialize to kdb
-// TODO: functions
-// TODO: collapse all atom/vector out, use guards on type codes instead?
-
 use std::mem::size_of;
 use std::ptr::{read, copy_nonoverlapping};
 use std::vec::Vec;
@@ -19,6 +12,7 @@ pub enum KObject {
     KeyedTable  (KKeyedTable),
 
     Function (KFunction),
+    Error    (KSymbol),
     Unknown  (Vec<u8>),
 }
 
@@ -188,12 +182,13 @@ impl KObject {
     pub fn parse(msg: &[u8]) -> (KObject, usize) {
         let val_type = msg[0] as i8;
         match val_type {
+            -128 => cast_add!(KObject::Error, Self::read_sym_atom(&msg[1..]), 1),
             -19...-4 | -2...-1 => cast_add!(KObject::Atom, Self::parse_atom(msg), 0),
             0...2 | 4...19 => cast_add!(KObject::Vector, Self::parse_vector(msg), 0),
             98 => cast_add!(KObject::Table, Self::parse_table(msg), 0),
             99 | 127 => Self::parse_dict(msg),
             100...111 => cast_add!(KObject::Function, Self::parse_function(msg), 0),
-            _ => panic!("Unknown type code: {}", val_type),
+            _ => panic!("Unknown type code: {} {:?}", val_type, msg),
         }
     }
 

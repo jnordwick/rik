@@ -126,7 +126,7 @@ pub type KLambda = (KSymbol, String);
 pub type KPrimVerb = (i8, i8);
 pub type KAdverb = (i8, Box<KFunction>);
 pub type KProjection = Vec<KObject>;
-pub type KComposition = Vec<KObject>; // All Functions, could be tighened up a little
+pub type KComposition = Vec<KObject>; // This is all functions, could be tighened up some
 
 #[derive(Debug)]
 pub struct KDictionary(pub KVector, pub KVector);

@@ -3,27 +3,46 @@ extern crate rik;
 
 use std::collections::hash_map::HashMap;
 
-// TODO: endian issues
-//         byteorder (0.3.11)
-//         - Library for reading/writing numbers in big-endian and little-endian.
-//         -> https://crates.io/crates/byteorder
-
-// TODO: Fix the char issues. K is bytes, Rust needs proper UTF-8.
-
 fn main() {
 
+    // connect
     let mut kk = rik::Konnection::konnect("localhost:5001", "abc", "").unwrap();
     println!("kk = {:?}", kk);
 
-    let qq = kk.query("dd");
-    println!("qq = {:?}", qq);
+    {
+        // Make a dictionary.
+        // Most K structures are returned as either the underlying,
+        // a Vec<T>, or a struct of the appropriate Vecs.
 
-    let buf = kk.read_message();
-    let (rr, ss) = rik::KObject::parse(buf);
-    println!("rr={:?} ss={:?}", rr, ss);
+        let qq = kk.query("`a`b`c!1 2 3");
+        let buf = kk.read_message();
+        let (rr, ss) = rik::KObject::parse(buf);
+        println!("size={:?} read={:?}", ss, rr);
 
-    let mm = kdict_to_hashmap!(rik::KVector::Symbol, rik::KVector::Long, rr);
-    println!("hashmap = {:?}", mm);
+        // Some macro magic to get the right types out
+        // rust kills you on the typechecking.
+        // The dictionary is a (Vec<K>,Vec<V>) tuple struct,
+        // and this extracts what you are expecting and puts it
+        // into a HashMap for you.
+        let mm = kdict_to_hashmap!(rik::KVector::Symbol, rik::KVector::Long, rr);
+        println!("hashmap = {:?}", mm);
+    }
+
+    {   // Try a basic symbol
+        kk.query("`$\"asd\"");
+        let (rr, _) = rik::KObject::parse(kk.read_message());
+        if let rik::KObject::Atom(rik::KAtom::Symbol(s)) = rr {
+            println!("sym = {}", s);
+        }
+    }
+
+    {   // And now a vector
+        kk.query("1.1*key 10");
+        let (rr, _) = rik::KObject::parse(kk.read_message());
+        if let rik::KObject::Vector(rik::KVector::Float(f)) = rr {
+            println!("float = {:?}", f);
+        }
+    }
 
     println!("done");
 }

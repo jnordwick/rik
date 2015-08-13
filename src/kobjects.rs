@@ -166,6 +166,23 @@ macro_rules! cast_add {
     })
 }
 
+#[macro_export]
+macro_rules! kdict_to_hashmap {
+    ($kt:path, $vt:path, $val:expr) => ({
+        if let $crate::KObject::Dictionary( $crate::KDictionary( $kt(kk), $vt(vv) ) ) = $val {
+            assert!(kk.len() == vv.len());
+            let mut hmap = HashMap::with_capacity(kk.len());
+            for i in 0..kk.len() {
+                hmap.insert(kk[i].clone(), vv[i].clone());
+            }
+            hmap
+        } else {
+            panic!("failure to deconstruct KObject::Dictionary {:?}", $val);
+        }
+    })
+}
+
+
 impl KObject {
 
     pub fn parse(msg: &[u8]) -> (KObject, usize) {
